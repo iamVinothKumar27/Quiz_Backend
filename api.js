@@ -133,19 +133,29 @@ const defaultOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://tce-quiz-app.pages.dev',
+  'https://quiz-frontend-weld.vercel.app',
 ];
+
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
-const corsOrigins = Array.from(new Set([...defaultOrigins, ...allowedOrigins]));
+
+const corsOrigins = new Set([...defaultOrigins, ...allowedOrigins]);
 
 app.use(cors({
-  origin: corsOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true
-}));
+  origin: (origin, cb) => {
+    // allow Postman / server-to-server calls (no origin)
+    if (!origin) return cb(null, true);
 
+    if (corsOrigins.has(origin)) return cb(null, true);
+
+    return cb(new Error(`CORS blocked for origin: ${origin}`), false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 // Serve uploaded audio files statically
 app.use('/uploads/audio', express.static('uploads/audio'));
 // Serve static images
